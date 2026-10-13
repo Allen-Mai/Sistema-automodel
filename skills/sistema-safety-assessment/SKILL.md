@@ -343,6 +343,29 @@ SF        → 属于 PR 项目
 项目属性面板与 Messages 评估全部可用、无任何格式错误。Messages 里的红字属数据层问题
 （PLr 未达到、类别条件未满足），是正常建模迭代，与文件格式无关。
 
+### 14.2 已知边界：`plcal` / `pfhcal` 需要软件算一次
+
+`sfops.plcal` / `sfops.pfhcal`（以及 `componentops` 的 `plsubitemscal` 等 `*cal` 字段）是
+**SISTEMA 计算后回写的**。脚本只能先写占位值（`plcal="plN"`、`pfhcal="-1"`），
+所以刚生成的项目打开后 Messages 会报：
+
+```
+The required performance level (PLr = c) is not reached by this safety function.
+Hint: See tab 'Subsystems' column 'PL'
+```
+
+**这不是文件缺陷**：手工在 GUI 里建的项目，只要没触发过重算，存盘后同样是
+`plcal="plN"` / `pfhcal="-1"`，报同样的消息。SISTEMA 需要**在界面里真正修改一次参数**
+（切换类别、改 PLr 等）才会重算并回写这些字段。实测单纯"切换树节点选择"不足以触发。
+
+因此当前最实用的工作流是：
+
+```
+脚本生成骨架 → SISTEMA 打开核对 → 界面里改一次参数触发重算 → Ctrl+S 保存
+```
+
+若要全自动，需要接第 11 节的 Win32 消息层，由脚本模拟"改参数 + 保存"这两个动作。
+
 ## 15. 官方建模流程（从 IFA SISTEMA Cookbook 1 提取）
 
 来源：*The SISTEMA Cookbook 1 — From the schematic circuit diagram to the Performance Level*

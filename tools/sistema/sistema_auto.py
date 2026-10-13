@@ -158,7 +158,7 @@ class Subsystem:
     ccf: Any = 0
     mttfd: Any = 10
     dcavg: Any = 0
-    pfh: str = '3,8E-5'          # template default; recalculated on open
+    pfh: str = '3.8E-5'          # template default; recalculated on open (3.0.4 uses a dot)
     encapsulated: bool = False   # True -> manufacturer states PL/PFH, channels stay empty
     pl_value: str = ''           # for encapsulated subsystems (e.g. 'd')
     channels: dict[str, list[Block]] = field(default_factory=dict)
@@ -375,7 +375,7 @@ def check_project(project: Project) -> list[str]:
             stag = f'  SB "{sb.name}"'
             c = str(sb.category).upper()
             if sb.encapsulated:
-                if not sb.pfh or sb.pfh == '3,8E-5':
+                if not sb.pfh or sb.pfh.replace(',', '.') == '3.8E-5':
                     problems.append(f'{stag}: 封装子系统应填厂家 PFH（当前是模板默认值）')
                 if any(sb.channel_blocks(ch) for ch in CHANNELS):
                     problems.append(f'{stag}: 封装子系统不应包含块（内部结构不拆解）')
@@ -507,7 +507,7 @@ def project_from_spec(spec: dict[str, Any]) -> Project:
                 name=sb_spec.get('name', ''), category=sb_spec.get('category', 'B'),
                 function=sb_spec.get('function', 'unknown'),
                 ccf=sb_spec.get('ccf', 0), mttfd=sb_spec.get('mttfd', 10),
-                dcavg=sb_spec.get('dcavg', 0), pfh=sb_spec.get('pfh', '3,8E-5'),
+                dcavg=sb_spec.get('dcavg', 0), pfh=sb_spec.get('pfh', '3.8E-5'),
                 encapsulated=bool(sb_spec.get('encapsulated', False)),
                 pl_value=sb_spec.get('pl', ''))
             for ch_name, blocks in (sb_spec.get('channels') or {}).items():
