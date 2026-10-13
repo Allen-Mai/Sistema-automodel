@@ -375,3 +375,54 @@ SF        → 属于 PR 项目
   而不是建成 Cat 4 的刚性结构子系统（那样会被要求提供 MTTFd / DCavg / CCF，而这些数据厂家并不以该形式给出）
 - **带 B10d 的机电元件（急停按钮、接触器、继电器）应细分到元素级**，在元素上填 B10d + nop
   （把 B10d 填在块级 SISTEMA 也能算，但不符合官方流程，且与 35 个官方示例的结构不一致）
+
+## 16. 官方急停回路建模参照（Example_10 实测结构，可直接照抄）
+
+`IFA Report 2/2017e Example_10` = "Safe stopping of a PLC-driven drive by emergency stop – Cat 3 – PL d"，
+**与"急停按钮 → 安全模块 → 冗余停机"这类回路结构完全对应**，是建模时的最佳模板。
+
+### 16.1 整体结构（三个子系统串联）
+
+| 子系统 | 形态 | 关键参数 |
+|---|---|---|
+| **SB1 Emergency stop devices**（输入） | 刚性结构 Cat 3 | `cat=cat3`、`ccf=75`、`mttfd=10`、`dcavg=0`、`plsubitemscal=plE`、`fn=fncInput` |
+| **SB2 Emergency stop safety module**（逻辑） | **封装子系统** | `cat=cat3`、**`pfh=3E-7`**、`pldet=detDirect`、`mttfddet=detDirect`、`dcavgdet=detDirect`、`ccfscoredet=detDirect`、`plsubitemscal=plN`、`fn=fncLogic`，**三个通道全空** |
+| **SB3 Redundantly stopping**（输出） | 刚性结构 Cat 3 | `cat=cat3`、`plsubitemscal=plD`、`ccfscoredet=detMeasures`、`fn=fncOutput` |
+
+SF 结果：`PLr=plC` → `PLcal=plD`、`PFHcal=7,36408084179038E-7`（达标）。
+
+### 16.2 急停按钮的官方参数形态（双通道）
+
+```
+CH1: BL S3.1  mttfd=10  dc=0,6  b10d=127500  nop=1  tech=tecElectromechanic  fn=fncInput
+CH2: BL S3.2  mttfd=10  dc=0,6  b10d=127500  nop=1  tech=tecElectromechanic  fn=fncInput
+CHtest: （空）
+```
+
+注意：**B10d=127500、DC=0,6（60%）、nop=1**，且 `mttfd=10` 是直接填的保守值。
+
+### 16.3 输出侧（冗余停机）参数形态
+
+```
+CH1: Contactor relay    mttfd=3      dc=0,99  b10d=5000000  nop=240   tecElectromechanic fncOutput
+     PLC                mttfd=10     dc=0     b10d=0        nop=-2    tecElectronic      fncLogic
+     Frequency inverter mttfd=35     dc=0     b10d=0        nop=-2    tecElectronic      fncOutput
+CH2: Contactor relay    mttfd=3      dc=0,99  b10d=5000000  nop=240
+     Contactor relay    mttfd=3      dc=0,99  b10d=2000000  nop=76800
+     Capacitor          mttfd=45662  dc=0,6   b10d=0        nop=-2    tecElectronic
+     Mains contactor    mttfd=3      dc=0,99  b10d=600000   nop=76800
+```
+
+**规律**：机电件给 `b10d` + `nop`；电子件给 `b10d=0` + 直接 `mttfd`（可很大，如电容 45662、变频器 35）。
+
+### 16.4 封装子系统的 `.ssm` 写法（生成文件时照这个）
+
+- 子系统：`pldet=detDirect`、`mttfddet=detDirect`、`dcavgdet=detDirect`、`ccfscoredet=detDirect`
+- `pfh` 填厂家值（示例 `3E-7`），`plsubitemscal=plN`（不用类别推算）
+- **三个通道仍然存在，但全部为空**（不建任何块）
+- Category 仍要填（示例 `cat3`）
+
+### 16.5 官方示例中的 CCF 判定方式
+
+`ccfscoredet` 至少三种取值：`detDirect`（直接给分，示例 SB1 用这个，`ccf=75` ≥65 达标）、
+`detMeasures`（从措施清单汇总，示例 SB3 用这个）、以及由下级汇总的 `detSubItems`。
