@@ -19,7 +19,7 @@
 | `skills/windows-desktop-automation/` | Windows 桌面自动化 skill：DPI 缩放、前台锁、模态框、坐标换算、点击验证 |
 | `skills/dsh-plugin-and-skill-ops/` | DSH 插件与 skill 运维 skill：装插件、接外部 MCP、写本地 skill 的全部踩坑 |
 | `tools/`（asar-*.js） | 从 DSH 的 `app.asar` 提取插件实现，用于诊断"插件装了但没生效" |
-| `windows-mcp/` | Windows-MCP 接入方案：一键安装脚本 + DSH 配置片段 + 版本记录 + 7 条踩坑 |
+| `windows-mcp/` | [**Windows-MCP**](https://github.com/CursorTouch/Windows-MCP) 接入方案：一键安装脚本 + DSH 配置片段 + 版本记录 + 7 条踩坑 |
 
 ## 快速开始
 
@@ -93,6 +93,26 @@ Copy-Item .\skills\* "$env:USERPROFILE\.dsh\skills\" -Recurse -Force
 - DSH：profile patch 新增条目必须写在 `insert:` 里否则静默跳过；`install_bundle` 只能装 bundle；
   uv 默认挑最新 Python 导致 `pyyaml` 编译失败（须 `--python 3.13`）
 - Git：本机 github 直连不可达，且 **git 不读 Windows 系统代理**，推送需 `-c http.proxy=…`
+
+## 外部项目与引用
+
+本仓库站在这些项目和文献之上，逐一列出出处：
+
+| 项目 / 文献 | 来源 | 在本仓库中的角色 |
+|---|---|---|
+| **Windows-MCP** | [`CursorTouch/Windows-MCP`](https://github.com/CursorTouch/Windows-MCP) · MIT · PyPI [`windows-mcp`](https://pypi.org/project/windows-mcp/) · 默认分支 `main` | `windows-mcp/` 接入方案所对接的 MCP 服务器；提供 Snapshot / Click / Type / PowerShell / Registry / FileSystem 等桌面自动化工具 |
+| **Windows-MCP 本机安装形态** | uv tool 安装，版本 **0.8.5** | 可执行文件 `%USERPROFILE%\.local\bin\windows-mcp.exe`，包体在 `%APPDATA%\uv\tools\windows-mcp\` |
+| **@deepseek-ai/dsh-mcp-client** | npm [`@deepseek-ai/dsh-mcp-client`](https://www.npmjs.com/package/@deepseek-ai/dsh-mcp-client) | DSH 侧的 MCP 桥接插件（DSH 自身不实现 MCP 客户端）；版本须与 DSH 运行时一致（本机 `0.2.0-rc.2`） |
+| **SISTEMA** | IFA/DGUV 官方免费软件 · [下载页](https://www.dguv.de/ifa/praxishilfen/practical-solutions-machine-safety/software-sistema/index.jsp) | 本仓库全部建模工作所操作的软件（本机 3.0.4，对应 ISO 13849-1:2023） |
+| **SISTEMA Cookbook 1** | IFA 官方 PDF（`The SISTEMA Cookbook 1 — From the schematic circuit diagram to the Performance Level`） | [建模规范](SISTEMA建模规范.md) §7 建模流程与流程步骤的来源 |
+| **SISTEMA Cookbook 5** | IFA 官方 PDF（`SISTEMA libraries`） | skill 第 17 节键盘快捷键表的来源；示例元件库 `.slb` |
+| **SISTEMA Cookbook 6** | IFA 官方 PDF（`Definition of safety functions`） | 建模规范 §3 中 SF 命名（触发事件+反应+危险部件）与 skill 第 18 节的依据 |
+| **IFA Report 2/2017e** | IFA 官方 [报告页](https://www.dguv.de/ifa/publikationen/reports-download/reports-2017/ifa-report-2-2017/index-2.jsp)（PDF + 示例 ZIP） | 52 个应用示例；其 **35 个 `.ssm` 官方示例项目**用于反推文件格式，`Example_10` 是急停建模参照模板 |
+| **ISO 13849-1:2023** | ISO / EN 标准（2023 第四版，过渡期至 2027-05-15） | 建模规范与 skill 中全部参数定义、类别要求、PL / PFHd 判据的依据 |
+| **EN ISO 13849-1 附录 C / D / E** | 标准附录 | 元件典型值、既有数据集合、DC 诊断措施表（SISTEMA 内置为 `Typical component values` 与 `DC-rating by choosing measures`） |
+
+> 引用这些项目的**名称与链接**用于说明来源与对接方式；各自的许可与版权归其所有者。
+> 本仓库不包含 Windows-MCP 的源码（如需源码请从上游仓库获取：`git clone --depth 1 https://github.com/CursorTouch/Windows-MCP`）。
 
 ## 许可
 
