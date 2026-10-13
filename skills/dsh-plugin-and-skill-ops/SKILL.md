@@ -69,3 +69,19 @@ CLI：`resources\runtime\cli\bin\dsh.cmd`（需把 `resources\runtime\bin` 加�
 
 - 会话审批策略为 `never` 时，任何需要审批的动作（`sandbox_permissions` 提权、plugin_manager 写操作）会被**自动拒绝**，不要反复尝试。
 - 装第三方插件/运行外部 MCP 服务器会把外部代码引入本机并常带完全系统访问能力（Windows-MCP 自带 PowerShell/Registry/FileSystem 工具），装前要提醒用户；遥测类变量（如 `ANONYMIZED_TELEMETRY=false`）可在 `env` 里关掉。
+
+## 7. 网络与代理（本机必读）
+
+- 本机 **github.com 直连不稳定/不可达**（`Test-NetConnection github.com -Port 443` 为 False），但 **Clash Verge 常驻**
+  （`clash-verge` + `verge-mihomo` 进程，系统代理 `HKCU:\...\Internet Settings` 指向 `127.0.0.1:7897`）。
+- **git 不读 Windows 系统代理**，直连 clone/push 会失败：
+  `fatal: unable to access 'https://github.com/...': Failed to connect to github.com:443 after 21xxx ms`。
+  解决（只在本次命令生效，不改用户全局配置）：
+  ```powershell
+  git -c http.proxy=http://127.0.0.1:7897 -c https.proxy=http://127.0.0.1:7897 push origin main
+  ```
+  需要持久化时再写 `git config --global http.https://github.com.proxy http://127.0.0.1:7897`。
+- 先用 `Invoke-WebRequest -Proxy http://127.0.0.1:7897 https://api.github.com/rate_limit` 验证代理是否通（HTTP 200 即可）。
+- PowerShell 调用 git 时，正常进度也会走 stderr，看起来像报错；**判断成败看 `$LASTEXITCODE` 和 `git ls-remote`**，不要被红字误导。
+- 本机 git 是 winget 装的（`winget install --id Git.Git -e --scope user`，2.55.x），装完新进程才有 PATH。
+- 该机器的 GitHub 凭据已存在（clone/push 无需输入 PAT）；私有仓库用 API 查会返回 404，属正常现象，用 `git ls-remote` 判断存在性更可靠。
