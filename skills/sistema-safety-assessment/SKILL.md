@@ -426,3 +426,70 @@ CH2: Contactor relay    mttfd=3      dc=0,99  b10d=5000000  nop=240
 
 `ccfscoredet` 至少三种取值：`detDirect`（直接给分，示例 SB1 用这个，`ccf=75` ≥65 达标）、
 `detMeasures`（从措施清单汇总，示例 SB3 用这个）、以及由下级汇总的 `detSubItems`。
+
+## 17. 键盘快捷键全表（Cookbook 5 Table 2/3，自动化时优先用）
+
+**主窗口（Table 2）**：
+
+| 快捷键 | 动作 |
+|---|---|
+| `Ctrl+Ins` | **新建项目或对象**（树里新建子节点 —— 建模主力键） |
+| `Ctrl+N` / `Ctrl+L` / `Ctrl+S` / `Ctrl+Alt+S` | 新建项目 / 加载项目 / 保存 / 另存为 |
+| `Ctrl+F4` / `Ctrl+Alt+F4` | 关闭项目 / 关闭全部项目 |
+| `Ctrl+C` / `Ctrl+V` / `Ctrl+X` / `Ctrl+Del` | 复制 / 插入 / 剪切 / 删除 |
+| **`Ctrl+Alt+C`** | **复制到库**（把项目里的对象存入库） |
+| **`Ctrl+Home`** | **向上一级**（树导航，比坐标点击可靠得多） |
+| `Ctrl+Cursor↑` / `Ctrl+Cursor↓` | 对象上移 / 下移（调整通道内块的顺序） |
+| `Home` / `End` / `PageUp` / `PageDown` | 跳到树/列表开头 / 结尾 / 上页 / 下页 |
+| **`F2`** | **编辑选中对象的名称**（重命名比点输入框稳） |
+| `F5` | 刷新视图 / 树 |
+| `Ctrl+B` | 打开库 |
+| `Ctrl+Alt+B` | 从选中的库加载 |
+| `Ctrl+H` / `Ctrl+K` | 显示/隐藏消息窗格 / 上下文窗格 |
+| `Ctrl+R` / `Ctrl+O` | 显示汇总 / 选项窗口 |
+| `Ctrl+E` / `Ctrl+P` | 导出 PDF / 打印项目 |
+| **`Alt+F3`** | **打开向导（wizard）** |
+| `F1` / `F3` / `Ctrl+F3` | 帮助 / What's this? / 上下文帮助 |
+
+**库窗口专属（Table 3）**：
+
+| 快捷键 | 动作 |
+|---|---|
+| **`Ctrl+B`** | **添加本地库**（⚠️ 与主窗口的 `Ctrl+B`＝打开库**含义不同**） |
+| `Alt+B` / `Ctrl+Alt+B` | 添加网络库 / 新建库 |
+| `Ctrl+F4` / `Alt+F4` | 关闭库 / 关闭库窗口 |
+| `Ctrl+N` | 在树中新建对象 |
+| `Ctrl+S` | 将更改保存到库 |
+| `Ctrl+P` / `Ctrl+I` | 锁定库 / 库信息 |
+
+⚠️ 发按键前先确认焦点在哪个窗口 —— 同一个 `Ctrl+B` 在两个窗口里是两件事。
+
+## 18. 安全功能（SF）的定义与字段（Cookbook 6）
+
+一个安全功能**必须包含三要素**（也是 SF 的 `name` 该写清的内容）：
+
+1. **触发事件** Triggering event —— 通常是操作安全防护装置（"打开安全门 ST1"）
+2. **安全相关反应** Safety-related reaction —— 导致安全状态，常见三类：
+   - **STO**（safe torque off，非受控停止）：切断动力，最简单且符合失效安全原则
+   - **SS1**（safe stop 1，受控停止）：有惯性、需要尽快停下时
+   - **SS2**（safe stop 2，受控停止后保持）：停下后还需保持受控位置时
+3. **机器的危险部件** Dangerous part of the machine
+
+定义时依次回答三个问题：**哪个部件危险？什么反应？什么事件触发？**
+
+四个补充要素及其在 `.ssm` 中的落点：
+
+| 要素 | 说明 | `sfops` 字段 |
+|---|---|---|
+| 运行模式 | 安全功能在哪些模式下必须有效（自动模式 / 设置模式） | `opmode` |
+| **PLr** | 由风险图得出（伤害严重度 S、暴露频率与时长 F、避免可能性 P） | `plr` + `riskparamf` / `riskparamp` / `riskparams` / `wparameter` |
+| 需求率 Demand rate | 安全功能被触发的频率；**Cat 2 要求测试率 ≥ 100 × 需求率** | `requestfrequency` |
+| 惯性运行 Running-on | 从触发到达到安全状态的时间限制（光幕等尤其重要） | `responsetime` |
+
+`sfops` 的其它相关字段：`reaction`（安全相关反应）、`safestate`（安全状态）、
+`sftype`（安全功能类型 —— 官方示例里是整句，如 `Safety-related stop function initiated by safeguard`）、
+`triggerevent`（触发事件）、`priority`、`plcal` / `pfhcal`（计算结果）。
+
+**自动化填写建议**：SF 的 `name` 按"触发事件 + 反应 + 危险部件"写全（例：
+`Opening of the safety door ST1 leads to a controlled stop (SS2) of the axis A1`），
+`sftype` 用官方句式，`reaction` 写 STO/SS1/SS2 对应的描述 —— 这样导出的报告才合格。
