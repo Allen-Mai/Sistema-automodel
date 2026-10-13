@@ -1,4 +1,4 @@
-# A
+# Sistema-automode
 
 从实机操作中沉淀的 **DSH（DeepSeek Harness）技能与工具集** —— 可直接复制到新设备的
 `%USERPROFILE%\.dsh\skills\` 使用，也可用附带的脚本批量部署。
