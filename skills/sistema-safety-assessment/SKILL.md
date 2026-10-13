@@ -147,3 +147,31 @@ PR 项目        Project          一个 .ssm 文件 = 一台设备
 - 截图/点击：Windows-MCP（`mcp__windows__*`）或 PowerShell + `user32`（`SetCursorPos` / `mouse_event`）。
 - 图片判读：`read_image`；需要看清细节时用 Python(PIL) 裁剪放大后再读，比全屏缩略图可靠。
 - 坐标/窗口枚举：PowerShell + `EnumWindows`、`GetWindowRect`。
+
+## 11. 用 Win32 消息驱动 SISTEMA（首选，比坐标点击可靠得多）
+
+**核心结论：SISTEMA 不暴露 UI Automation，但它的 Delphi 控件本身是标准 Win32 窗口，可以直接发消息。**
+实测在本机 SISTEMA 3.0.4 上验证通过。
+
+| 控件类 | 对应界面 | 可行操作（实测） |
+|---|---|---|
+| `TLabeledEditEx` | 所有单行输入框（Name、Manufacturer、B10D、nop、DC…） | **`WM_SETTEXT` 写入 / `WM_GETTEXT` 读回** ✅ |
+| `TIFABitBtn` | 按钮（New、Open、Calculate nop、Switch content of channels…） | `BM_CLICK`（0x00F5） |
+| `TAdvOfficeCheckBox` / `TRadioButton` | Function 勾选、MTTFd/DC 方式单选 | `BM_CLICK` / `BM_SETCHECK` |
+| `TIFAComboBox` | Category 等选择控件 | `WM_GETTEXT` **可读出当前值与全部选项文本**（实测返回 `'3\|Requirements of B…'`）✅ |
+| `TtiVTTreeView` / `TtiVirtualStringTree` | 项目树（自绘） | `WM_GETTEXT` 无效 → 用键盘消息或坐标点击 |
+| `TValueListEditor` / `TIFAMarkedStringGrid` | Context 结果表 / Messages 表（自绘） | `WM_GETTEXT` 无效 → 截图判读 |
+
+**定位控件**：`EnumWindows`（顶层，用 `TFormMain`/`TFormComponent` 等类名区分面板）+ `EnumChildWindows` 拿 hwnd、类名、文本、矩形。
+面板对应关系：`TFormComponent`=子系统/块属性面板、`TFormContext`=Context、`TFormSSMMessageListUI`=Messages。
+
+**三个必踩的坑**：
+
+1. **`EnumChildWindows` 本身已经递归遍历所有后代**，回调里不要再递归 —— 否则数量指数爆炸（实测跑出 340 万行 / 395 MB）。
+2. **消息要发给控件本体，不要找它的子 `Edit`**：`TLabeledEditEx` 的子控件只有 `TWinControlProxy`，`FindWindowEx(..., 'Edit', ...)` 返回 0。Delphi 把自定义类名注册给了编辑框窗口自己，所以 `SendMessageW(editHwnd, WM_SETTEXT/ WM_GETTEXT, ...)` 直接可用。
+3. **验证写入必须用 `SendMessage(WM_GETTEXT)`**（同步查询控件真实值）；`GetWindowText` 对跨进程窗口只返回缓存的标题，会得到假阳性。
+
+**窗口位置**：若控件矩形出现极大负值（如 `(-31000,-31000)`），说明窗体被移到屏幕外，
+先 `SetWindowPos(hwnd, 0, 0, 0, 1900, 1040, SWP_NOZORDER)` + `SetForegroundWindow` 拉回来，再枚举才有正常坐标。
+
+脚本：`tools/sistema/enum_controls.ps1`（平铺枚举控件树，输出 hwnd/类名/文本/矩形）。
