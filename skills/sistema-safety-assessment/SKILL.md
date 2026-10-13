@@ -324,3 +324,54 @@ SF        → 属于 PR 项目
 | 批量新建、按描述从零建模型 | **生成 `.ssm`**（第 14 节；快，但算出的 PL 要在软件里打开一次触发重算） |
 | 精修 / 验证 / 复用已有项目 / 需要软件实时反馈 | **Win32 消息驱动**（第 11 节，实测可用） |
 | 混合（最稳） | 脚本生成骨架 → 界面打开核对 → 用消息填剩余参数 |
+
+## 15. 官方建模流程（从 IFA SISTEMA Cookbook 1 提取）
+
+来源：*The SISTEMA Cookbook 1 — From the schematic circuit diagram to the Performance Level*
+（IFA, Version 1.0 EN, 29 页；本机已存 `Desktop\sistema_cookbook1_end.pdf`，提取脚本见 `tools/sistema/extract_pdf.py`）。
+
+### 15.1 先判断子系统的两种形态（决定后面所有操作）
+
+| 形态 | 判据 | SISTEMA 里的做法 |
+|---|---|---|
+| **封装子系统** Encapsulated | **厂家自己声明了 PL / PFH / Category**（安全 PLC、安全模块、认证安全继电器如 PNOZ、G9SX） | 子系统 → `PL` 标签 → **"Enter PL / PFH directly"** → 填厂家 PL/PFH，Category 在下一个标签填；内部结构**不需要拆解** |
+| **刚性结构块组** Rigid structure | 自己用元件搭出来的通道结构 | 子系统 → `PL` 标签 → **"Determine PL / PFH from Category, MTTFd and DCavg"** → 再按 15.2 的 4.6 填 Cat / MTTFd / DCavg / CCF |
+
+封装子系统的两个开关：
+
+- 勾选某个复选框后 **PL 与 PFH 会按平均值互相推算**（只填一个即可）
+- 若能排除所有危险元件故障 → 勾 **"Failure exclusion"**（PFH = 0）
+
+### 15.2 官方建模步骤（第 4 章 "Transfer to SISTEMA" 全流程）
+
+| 步 | 操作 | 界面落点 |
+|---|---|---|
+| 4.1 | 新建项目 | `New` → "Project name" 对话框 → 树里出现 `PR` |
+| 4.2 | 建安全功能 | **Safety function 标签**上 `New` → 树里出现 `SF` |
+| 4.3 | 设 PLr | SF → `PLr` 标签 → 用风险图，或直接输入（机器专用标准给定值时直接填） |
+| 4.4 | 加子系统 | SF → **Subsystems 标签** `New` |
+| 4.5 | 封装子系统 | 见 15.1 上格 |
+| 4.6 | 刚性结构子系统 | `PL` 标签选 "Determine PL / PFH from Category, MTTFd and DCavg"，然后依次：<br>a) `Category` 标签选类别 + 逐条评估 "Requirements of the Category"<br>b) `MTTFd` 标签直接填，或选 "Determine MTTFd-value from blocks"<br>c) `DCavg` 标签直接填，或选 "Determine DCavg-value from blocks"<br>d) `CCF` 标签选措施，**至少 65 分**（可直接填分或用措施库汇总） |
+| 4.6.1 | 输入块 | **选定 Category 后 SISTEMA 自动创建通道（CH）**；在 Channel 下 `New` 添加块（BL） |
+| 4.6.2 | 输入元素 | **凡是有 B10d 的元件都要细分到元素级**：块的 `Elements` 标签 `New`；元素级选 "Determine MTTFd-value from B10d-Value" + **"Calculate nop"** |
+| 4.6.3.1 | MTTFd/B10d | 块或元素 → `MTTFd` 标签。数据来源：① 厂家数据 ② 既有数据集合（EN ISO 13849-1 附录 D）③ **附录 C 典型值（SISTEMA 内置 "Typical component values"）**；能排除故障时可勾 fault exclusion |
+| 4.6.3.2 | DC | 块或元素 → `DC` 标签填百分比；选 **"DC-rating by choosing measures"** 可通过 `Library` 调**附录 E** 的 DC 表；标准给区间时可在区间内取值 |
+| 4.7 | 检查结果 | 看消息窗口有无红叉 → 左下角显示 SF/SB/BL/EL 结果；**要求 PL ≥ PLr**，不足则换更高 MTTFd/B10d 的元件、提高 DC、或改用其它类别的子系统 |
+
+### 15.3 结构分析（怎么定类别，第 3.2 节）
+
+1. 在原理电路图上标出**功能通道**与**测试通道**
+2. **Step 1**：沿"元件最少的那条功能通道"，从左到右（传感器 → 执行器）把元件写成块
+3. **Step 2**：逐个块按类别特征（冗余 / 测试 / 经验证元件）归入相应类别的子系统
+4. **Step 3**：若厂家已声明 PL/PFH/Category → 作为**封装子系统**，不再拆解内部结构
+5. 再按冗余与测试情况判决：单个未检测故障后仍保持安全功能 → **Cat 3**；第二个未检测故障后仍保持 → **Cat 4**；
+   有测试通道且测试能触发安全状态 → **Cat 2**；无冗余无测试 → **Cat 1 / B**
+
+**注意**：不符合上述"指定架构"的元件布置**无法用 SISTEMA 分析**（要么改结构，要么改用 Markov 等方法，见 IEC 61508-6 附录 B）。
+
+### 15.4 对已有项目的直接启示
+
+- **PNOZ c1 / G9SX 这类认证安全继电器属于封装子系统** —— 应填厂家 PL/PFH（`Enter PL / PFH directly`），
+  而不是建成 Cat 4 的刚性结构子系统（那样会被要求提供 MTTFd / DCavg / CCF，而这些数据厂家并不以该形式给出）
+- **带 B10d 的机电元件（急停按钮、接触器、继电器）应细分到元素级**，在元素上填 B10d + nop
+  （把 B10d 填在块级 SISTEMA 也能算，但不符合官方流程，且与 35 个官方示例的结构不一致）
