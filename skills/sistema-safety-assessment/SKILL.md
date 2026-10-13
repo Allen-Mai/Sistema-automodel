@@ -280,3 +280,47 @@ SF        → 属于 PR 项目
 - **不覆盖网络安全**：物理安全、IT 安全、网络攻击防护都不在本标准范围内
 - **不涵盖 AI 技术**所需的额外特定要求（尽管 AI 可用于 SRP/CS）
 - **假定任务时间 20 年**、失效率在任务时间内恒定；元件的 `T10D` 小于任务时间时必须在到期前预防性更换
+
+## 13. IFA 官方资源（对建模极有价值，可直接下载）
+
+来源页：<https://www.dguv.de/ifa/praxishilfen/practical-solutions-machine-safety/sicherheit-von-maschinensteuerungen/index.jsp>
+（SISTEMA 的官方出处，链接前缀统一为 `https://www.dguv.de/medien/ifa/`）
+
+| 资源 | 直链后缀 | 用途 |
+|---|---|---|
+| **35 个官方示例项目**（.ssm, 220 kB） | `en/pub/rep/pdf/reports-2019/report0217e/ifa_report_2_2017e_examples.zip` | 真实项目蓝本，覆盖 Cat B/1/2/3/4 各类结构，**建模模式的最佳参考** |
+| **官方元件库**（.slb, 1.45 MB） | `en/pra/softwa/sistema/kochbuch/cookbook-5-example-library_version_2_0.zip` | 导入 SISTEMA 后块可直接从库中选（**解决本机"BL 库 0 项"**） |
+| Cookbook 4 示例项目（.ssm） | `en/pra/softwa/sistema/kochbuch/sistema-cookbook-4-example-library_version_2_0.zip` | 非标准架构的建模示例 |
+| **Cookbook 1**（PDF） | `en/pra/softwa/sistema/kochbuch/sistema_cookbook1_end.pdf` | **从原理电路图到 SISTEMA 建模**的官方流程（对应第 12.4 的层级约束） |
+| Cookbook 2～6（PDF） | 同目录 `sistema_cookbookN_*.pdf` | 网络库 / 多实例 / 非标准架构 / 库制作 / 安全功能定义 |
+| IFA Report 2/2017e 全文（PDF, 18.8 MB） | `en/pub/rep/pdf/reports-2019/report0217e/rep0217e.pdf` | 52 个应用示例的完整分析 |
+| SISTEMA 全部历史版本 | 页面 `…/software-sistema/alle-sistema-versionen/index.jsp` | 需要旧格式或对比版本行为时 |
+
+本机已下载到：`C:\Users\<user>\Desktop\SISTEMA V2 测试建模\_IFA官方资源\`。
+
+**注意**：官方示例是 **2015 版标准**（`normversion=ISO 13849-1:2015`）+ `ssmversion=2.0.8`，
+用本机 3.0.4 打开会提示版本差异 —— 内容可读，但建议另存为新格式后再改。
+
+## 14. 直接生成 `.ssm`（路线可行，字段约定见参考文档）
+
+从 35 个官方示例反推出的写入约定。**完整字段清单 + 枚举表 + 6 个已验证失败案例**见仓库
+[`tools/sistema/ssm-schema.md`](https://github.com/Allen-Mai/A/blob/main/tools/sistema/ssm-schema.md)，要点：
+
+- **枚举值**：`plN`/`plA`…`plE`；`catB`（**大写字母 B**）/`cat1`…`cat4`；
+  `tecElectronic`/`tecElectromechanic`/`tecPneumatic`/`tecHydraulic`/`tecMechanic`；
+  `fncInput`/`fncLogic`/`fncOutput`；`ch1`/`ch2`/`chTest`；`detDirect`（本级给值）/`detSubItems`（下级汇总）
+- **数字用逗号作小数点**（德语区域设置）：`PFHcal=4,23E-6`、`mttfd=518,8875`
+- **`-2` 表示"未设置"**：`nop=-2`、`mttfd=-2`；`b10d=0` 表示不用 B10d（电子件直接给 MTTFd）
+- **`componentops` 没有 `pl` 字段** —— PL 存在 `plsubitemscal` / `plsubitemssimplecal` / `pldirectcal` 里，
+  写 `pl` 会报错码 1866（这就是之前生成失败的直接原因）
+- 层级靠 oid 关联：`sfops.projectopoid` → `componentops.sfopoid` → `channelops.componentopoid`
+  → `blocops.parentopoid` → `elementops.parentopoid`
+- `blocops` 与 `elementops` **字段完全相同**（EL 复用 BL 结构，靠 `parentopoid` 区分层级）
+
+**两条自动化路线怎么选**：
+
+| 场景 | 推荐路线 |
+|---|---|
+| 批量新建、按描述从零建模型 | **生成 `.ssm`**（第 14 节；快，但算出的 PL 要在软件里打开一次触发重算） |
+| 精修 / 验证 / 复用已有项目 / 需要软件实时反馈 | **Win32 消息驱动**（第 11 节，实测可用） |
+| 混合（最稳） | 脚本生成骨架 → 界面打开核对 → 用消息填剩余参数 |
