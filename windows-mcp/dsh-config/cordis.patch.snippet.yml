@@ -1,0 +1,26 @@
+# DSH profile patch 片段：接入 Windows-MCP
+#
+# 用法：把这个 insert 条目追加到
+#   %USERPROFILE%\.dsh\profiles\desktop\cordis.patch.yml
+# 的顶层数组里（注意 insert 的缩进：列表项内容再缩进 4 空格）。
+# 追加后需要【重启 DSH 应用】才能生效（新增条目不能热加载）。
+#
+# 说明：
+#   serverName 决定工具名前缀 -> mcp__windows__Click 等
+#   command 必须写目标机器的绝对路径（uv tool 安装后位于 %USERPROFILE%\.local\bin\windows-mcp.exe）
+#   env 里的变量是显式覆盖，不会被 stdio 环境清洗规则删掉
+
+- insert:
+    - id: mcp-windows
+      name: "@deepseek-ai/dsh-mcp-client"
+      config:
+        serverName: windows
+        transport: stdio
+        command: "C:\\Users\\<user>\\.local\\bin\\windows-mcp.exe"
+        args: ["serve"]
+        env:
+          ANONYMIZED_TELEMETRY: "false"
+        toolCallTimeoutMs: 120000
+
+# 可选：只暴露 UI 自动化工具，屏蔽高危工具（按需启用）
+#        args: ["serve", "--exclude-tools", "PowerShell,Registry"]
