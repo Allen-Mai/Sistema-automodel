@@ -173,6 +173,26 @@ blocops.oid     ←  elementops.parentopoid
 |---|---|---|
 | `Invalid MTTFD value: -1` / `lower than or equal to 3` | 块的 mttfd 非法 | 机电件给 B10d+nop 让它算，或直接给 >3 的值 |
 | `Invalid B10D value: -1` | 电子件 b10d 为空 | 显式写 `b10d=0` |
-| `The attribute 'pl' is not allowed`（1866） | 给 componentops 写了 pl | 改用 `plsubitemscal` / `pldirectcal` |
+| `The attribute 'pl' is not allowed`（1866） | 给 componentops 写了 pl | 改用 `plsubitemscal` / `pldirectbindcal` |
+| `The attribute 'pldirectcal' is not allowed`（1866） | 用了 **2.0.8 的旧列名** | 3.0.4 已改名为 `pldirectbindcal` |
+| `Error reading field <Document>`，文件打不开 | **漏写了列**（只写有值的字段） | **每张表的所有声明列都必须写出来**，空值写 `""` |
 | `The current configuration does not allow to calculate the PFH value using the standard` | 类别与 DCavg/MTTFd 不匹配 | 单器件子系统用 `pldet=detDirect`；Cat 4 要求 DCavg 高，DC 只有 Low 时要降到 Cat 3 |
 | 生成的 SF 只有 `PL=a` | 沿用了 SB 的模板 `pfh` 缓存 | 打开后在界面里改一下参数触发重算，或直接在 `plsubitemscal` 里写正确值 |
+
+## 7. 生成文件时必须遵守的四条（SISTEMA 3.0.4 实测）
+
+| 规则 | 违反后果 |
+|---|---|
+| **每张表的所有声明列都要写出来**，空值写 `""` | 缺列 → `Error reading field <Document>`，**文件直接打不开** |
+| **只能写 `<fields>` 里声明过的列** | 未知属性 → **错误码 1866** |
+| **表集合、表顺序由模板决定**（含 `messagehelperops` 这类辅助表） | 凭空造表或漏表都可能被拒 |
+| **数字格式随版本**：3.0.4 用**点号**（`dc="0.65"`、`lambda="1.14155E-5"`），2.0.8 官方示例用**逗号**（`4,23E-6`） | 照抄 2.0.8 示例的小数写法会踩坑 |
+
+**最稳的做法**：拿一个**本机 SISTEMA 保存的 `.ssm` 当模板** —— 字段声明、表集合、每一列的默认值、
+数字格式全部继承，只替换 `rows`。缺值时从模板同表的第一个数据行取默认值（这样连空值的类型约定
+都跟该版本一致）。`tools/sistema/sistema_auto.py` 就是这么实现的。
+
+**实测结论**：用该脚本生成的 `移印机_auto.ssm`（1 SF / 4 SB / 12 CH / 6 BL / 6 EL，含一个封装子系统）
+被 SISTEMA 3.0.4 **正常打开**：项目属性面板、导航树、Messages 评估全部可用，无任何格式错误。
+Messages 里的红字是数据层问题（PLr 未达到、类别条件未满足），属于正常建模迭代，与文件格式无关。
+
