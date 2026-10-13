@@ -1,11 +1,18 @@
-# 08 - Windows MCP（DSH 接入 Windows 桌面自动化）
+# Windows-MCP（DSH 接入 Windows 桌面自动化）
 
 给 DeepSeek Harness 接上 [Windows-MCP](https://github.com/CursorTouch/Windows-MCP)：一个用 Python 写的 MCP 服务器，
 把 Windows 桌面操作能力（截图、点击、输入、开程序、PowerShell、注册表、文件系统…）暴露给 AI Agent。
 
-- 上游：`CursorTouch/Windows-MCP`（MIT，默认分支 `main`）
-- PyPI 包：`windows-mcp`（本机安装版本 **0.8.5**，uv tool 安装）
-- DSH 侧桥接插件：`@deepseek-ai/dsh-mcp-client`（版本必须与 DSH 运行时一致，本机为 **0.2.0-rc.2**）
+- 上游仓库：[`CursorTouch/Windows-MCP`](https://github.com/CursorTouch/Windows-MCP)（MIT，默认分支 `main`，约 13 MB）
+- PyPI 包：[`windows-mcp`](https://pypi.org/project/windows-mcp/)（本机安装版本 **0.8.5**，uv tool 安装）
+- DSH 侧桥接插件：[`@deepseek-ai/dsh-mcp-client`](https://www.npmjs.com/package/@deepseek-ai/dsh-mcp-client)
+  （版本必须与 DSH 运行时一致，本机为 **0.2.0-rc.2**）
+
+取上游源码（本仓库不内置，需要时自行克隆）：
+
+```powershell
+git clone --depth 1 https://github.com/CursorTouch/Windows-MCP
+```
 
 ## 为什么需要桥接插件
 
