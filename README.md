@@ -6,12 +6,18 @@
 
 > 📘 **[SISTEMA 建模规范](SISTEMA建模规范.md)** —— 项目结构、命名、参数取值与交付校验的作业基准。
 > 无论是人工建模还是脚本生成，都按这份规范执行；新手先读它。
+>
+> 🔍 **[SISTEMA 报告审查规范](SISTEMA报告审查规范.md)** —— 导出 PDF 之后，把自己当审核员再审一遍：
+> 18 条自动规则 + 7 项人工必查 + SISTEMA 导出 Bug 清单 + 结论模板。
 
 ## 目录
 
 | 路径 | 内容 |
 |---|---|
-| **[SISTEMA建模规范.md](SISTEMA建模规范.md)** | **建模规范**：六层层级、命名规则、子系统形态选择、参数规范与数据来源、元件细分、建模流程、交付校验清单、错误速查 |
+| **[SISTEMA建模规范.md](SISTEMA建模规范.md)** | **建模规范**：六层层级、命名规则、子系统形态选择、参数规范与数据来源、CCF 分项上限、B10/B10d 填写方向、元件细分、建模流程、交付校验清单、错误速查 |
+| **[SISTEMA报告审查规范.md](SISTEMA报告审查规范.md)** | **导出后审查**：DC/MTTFd/PL/CCF 四张速查表、18 条自动核查规则、7 项人工必查、SISTEMA 导出 Bug 清单、三部分结论模板 |
+| `tools/sistema/audit_report.py` | **报告审查器**：吃 `extract_pdf.py` 的文本，复算 B10d/MTTFd/PL，比对表格与 Justification 文字，抓乱码/截断/死链，输出 FATAL/WARN 清单 |
+| `docs/审查案例-往复式垂直输送机.md` | **真实审查案例**：111 页报告、21 项 FATAL —— 含 CCF 只有 55 分的硬伤、B10d 虚高 5 倍、52 页中文乱码 |
 | `skills/sistema-safety-assessment/` | SISTEMA 安全评估 skill（规范的**操作细则版**）：界面结构、Win32 消息自动化、`.ssm` XML 结构、ISO 13849-1:2023 条款、IFA 官方资源、急停建模参照模板、键盘快捷键 |
 | `tools/sistema/sistema_auto.py` | **建模生成器**：结构化描述 → 合法 `.ssm`（模板继承式，内置生成前校验） |
 | `tools/sistema/ssm-schema.md` | `.ssm` 九张表的完整字段清单、枚举取值、oid 层级关联、7 条实测失败案例 |
@@ -46,7 +52,18 @@ $py = "$env:USERPROFILE\.dsh\dsh-runtimes\dsh-primary-runtime\dependencies\pytho
 & $py .\tools\sistema\extract_pdf.py      <PDF> out.txt         # 提取 IFA Cookbook 等 PDF 正文
 ```
 
-### 3. 部署 skill / 接入 Windows-MCP
+### 3. 审查一份已导出的报告
+
+```powershell
+& $py .\tools\sistema\extract_pdf.py  .\评估报告.pdf .\报告.txt
+& $py .\tools\sistema\audit_report.py .\报告.txt --md audit.md  # 退出码 1 = 有 FATAL
+```
+
+脚本会复算每个块的 `B10d = B10/RDF`、`MTTFd = B10d/(0.1×nop)`、PL ↔ PFHd 区间，
+并把表格数值与 Justification 文字对撞（`文字写 99% / 表格填 65%` 这类），
+再抓中文乱码、字段截断、`..\` 死链、CCF 分项超附录 F 上限。
+
+### 4. 部署 skill / 接入 Windows-MCP
 
 ```powershell
 Copy-Item .\skills\* "$env:USERPROFILE\.dsh\skills\" -Recurse -Force
@@ -77,6 +94,11 @@ Copy-Item .\skills\* "$env:USERPROFILE\.dsh\skills\" -Recurse -Force
 | Cat 4 通道 MTTFd 上限 **2500 a** | 其余情况 100 a（2023 版相对旧版的实质变化） |
 | SISTEMA 可被 **Win32 消息驱动** | 无 UI Automation 也能自动化：输入框 `WM_SETTEXT`、下拉 `WM_GETTEXT`、按钮 `BM_CLICK` |
 | 六层层级 | PR → SF → SB → CH/TE → BL → EL，且插入顺序受强制约束 |
+| **DC 分级是 60/90/99** | <60 无 ／ 60–90 低 ／ 90–99 中 ／ ≥99 高。所以 SISTEMA 把 `80%` 显示成 `(Low)` **是对的**，别当成 Bug 去"声明" |
+| **CCF 分项不能超上限** | 附录 F 表 F.1：COM ≤ 5、EMC ≤ 10、ANA ≤ 5，DES/ENV 反而常被浪费；常见错误是 `COM 10 + E/M 15` 硬凑 65，折算后只有 55，Cat 3 不成立 |
+| **B10d = B10 / RDF** | 填 B10 与 RDF 时 RDF 越小 B10d 越大（"越填越安全"）；厂家给的是 B10d 就别再填 RDF |
+| **中文进 PDF 必乱码** | SISTEMA 是 Delphi/ANSI 程序：文档字段写中文 → 导出后显示 `¡¾ÖÐÎÄËµÃ÷¡¿`。自由文本一律英文 |
+| **文档字段会截断** | 超过字段上限直接切（实测截在 `…across the entire circuit, me`），论证段落要拆分 |
 
 ## 这些内容是怎么来的
 
@@ -94,6 +116,12 @@ Copy-Item .\skills\* "$env:USERPROFILE\.dsh\skills\" -Recurse -Force
   uv 默认挑最新 Python 导致 `pyyaml` 编译失败（须 `--python 3.13`）
 - Git：本机 github 直连不可达，且 **git 不读 Windows 系统代理**，推送需 `-c http.proxy=…`
 
+报告审查这半套能力来自另一次真实任务：给一台**往复式垂直输送机**（5 个 SF：6 道安全门联锁 / 急停 /
+上下限位 / 安全钳触发 / 超载保护，Mettler-Toledo SBS-2T 称重 + S7-1200F + PNOZ s7 + LC1D25）的
+111 页 SISTEMA 导出报告做 TÜV 式复核。人工逐页核对太慢，于是把审查规则写成 `audit_report.py`，
+一次跑出 21 项 FATAL（CCF 折算只有 55 分、门开关 B10d 虚高 5 倍、52 页中文乱码、SF 定义栏全空……），
+过程与结论留在 [docs/审查案例-往复式垂直输送机.md](docs/审查案例-往复式垂直输送机.md)。
+
 ## 外部项目与引用
 
 本仓库站在这些项目和文献之上，逐一列出出处：
@@ -110,6 +138,8 @@ Copy-Item .\skills\* "$env:USERPROFILE\.dsh\skills\" -Recurse -Force
 | **IFA Report 2/2017e** | IFA 官方 [报告页](https://www.dguv.de/ifa/publikationen/reports-download/reports-2017/ifa-report-2-2017/index-2.jsp)（PDF + 示例 ZIP） | 52 个应用示例；其 **35 个 `.ssm` 官方示例项目**用于反推文件格式，`Example_10` 是急停建模参照模板 |
 | **ISO 13849-1:2023** | ISO / EN 标准（2023 第四版，过渡期至 2027-05-15） | 建模规范与 skill 中全部参数定义、类别要求、PL / PFHd 判据的依据 |
 | **EN ISO 13849-1 附录 C / D / E** | 标准附录 | 元件典型值、既有数据集合、DC 诊断措施表（SISTEMA 内置为 `Typical component values` 与 `DC-rating by choosing measures`） |
+| **EN ISO 13849-1 附录 F** | 标准附录（CCF 措施清单） | [报告审查规范](SISTEMA报告审查规范.md) §1.4 的分项上限表；`audit_report.py` 的 F11 规则 |
+| **EN ISO 13849-1 附录 L** | 标准附录（EMI 抗扰度） | `audit_report.py` 的 F17 规则（SF 级写 `n/a`、子系统级却指向该 SF 的循环引用） |
 
 > 引用这些项目的**名称与链接**用于说明来源与对接方式；各自的许可与版权归其所有者。
 > 本仓库不包含 Windows-MCP 的源码（如需源码请从上游仓库获取：`git clone --depth 1 https://github.com/CursorTouch/Windows-MCP`）。
