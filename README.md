@@ -26,6 +26,10 @@
 | `skills/dsh-plugin-and-skill-ops/` | DSH 插件与 skill 运维 skill：装插件、接外部 MCP、写本地 skill 的全部踩坑 |
 | `tools/`（asar-*.js） | 从 DSH 的 `app.asar` 提取插件实现，用于诊断"插件装了但没生效" |
 | `windows-mcp/` | [**Windows-MCP**](https://github.com/CursorTouch/Windows-MCP) 接入方案：一键安装脚本 + DSH 配置片段 + 版本记录 + 7 条踩坑 |
+| **[docs/REA-SISTEMA-反馈闭环.md](docs/REA-SISTEMA-反馈闭环.md)** | **无截图自动化**：REA 从 PE 资源反推 93 个 Delphi 窗体当"地图"，反馈只认三条通道（控件回读 / `.ssm` 复解析 / 导出 PDF） |
+| `rea/` | [**REA**](https://github.com/morluto/rea) 接入：一键安装脚本、DSH 注册、本机两个坑（setup `reason: write`、Frida 装不上） |
+| `tools/sistema/driver/` | **SISTEMA 驱动库**：`win32.py` 消息层、`uimap.py` DFM 名↔hwnd 绑定、`session.py` 操作 API、`cli.py` 命令行 |
+| `tools/sistema/rea_ui_map.py` + `sistema_ui_map.md` | 调 `rea inspect-pe-resources` 取 343 个 `RT_RCDATA`，解出 93 个窗体、每个字段的 DFM 名与德文原始标签 |
 
 ## 快速开始
 
